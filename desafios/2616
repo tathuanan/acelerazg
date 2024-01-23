@@ -1,0 +1,7 @@
+--Nenhuma Locação                        (problema - 2616)
+
+select C.id, C.name from customers C
+left join locations L
+ON L.id_customers = C.id
+where L.id is null
+group by C.id;
