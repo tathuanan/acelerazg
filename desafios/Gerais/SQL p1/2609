@@ -1,0 +1,6 @@
+--Produtos por Categorias              (problema - 2609)
+
+select C.name, sum(P.amount) as sum from products P
+inner join categories C
+on P.id_categories = C.id
+group by C.name;
