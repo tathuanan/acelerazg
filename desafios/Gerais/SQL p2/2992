@@ -1,0 +1,49 @@
+--Divisões Com Maiores Médias Salariais        (problema - 2992)
+
+WITH salario_bruto AS (
+	SELECT
+		emp.nome,
+		emp.lotacao,
+		emp.lotacao_div,
+		dp.nome AS departamento,
+		dv.nome AS divisao,
+		SUM(COALESCE(venc.valor, NULL, 0)) AS salario
+	FROM empregado emp
+	JOIN departamento dp on dp.cod_dep = emp.lotacao
+	JOIN divisao dv on dv.cod_divisao = emp.lotacao_div
+	LEFT JOIN emp_venc empv on empv.matr = emp.matr
+	LEFT JOIN vencimento venc on venc.cod_venc = empv.cod_venc
+	GROUP BY 1, 2, 3, 4, 5
+)
+,desconto_bruto AS (
+	SELECT
+		emp.nome,
+		emp.lotacao,
+		emp.lotacao_div,
+		dp.nome AS departamento,
+		dv.nome AS divisao,
+		SUM(COALESCE(desco.valor, NULL, 0)) AS desconto
+	FROM empregado emp
+	JOIN departamento dp on dp.cod_dep = emp.lotacao
+	JOIN divisao dv on dv.cod_divisao = emp.lotacao_div
+	LEFT JOIN emp_desc empd on empd.matr = emp.matr
+	LEFT JOIN desconto desco on desco.cod_desc = empd.cod_desc
+	GROUP BY 1, 2, 3, 4, 5
+)
+,media_por_divisao AS (
+SELECT
+	descontob.departamento,
+	descontob.divisao AS divisao,
+	ROUND(AVG(salario - desconto), 2) AS media
+FROM salario_bruto salariob
+LEFT JOIN desconto_bruto descontob ON descontob.nome = salariob.nome
+GROUP BY 1, 2
+)
+SELECT
+	mediad.departamento,
+	mediad.divisao,
+	mediad.media
+	FROM media_por_divisao mediad
+WHERE media IN(SELECT MAX(media) OVER (PARTITION BY departamento) FROM media_por_divisao)
+GROUP BY 1, 2, 3
+ORDER BY 3 DESC
