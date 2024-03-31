@@ -1,0 +1,36 @@
+--Pagamento dos Empregados                          (problema - 2997)
+
+WITH salario_bruto AS (
+	SELECT
+		emp.matr,
+		SUM(COALESCE(venc.valor, NULL, 0)) AS salario
+	FROM empregado emp
+	JOIN departamento dp on dp.cod_dep = emp.lotacao
+	JOIN divisao dv on dv.cod_divisao = emp.lotacao_div
+	LEFT JOIN emp_venc empv on empv.matr = emp.matr
+	LEFT JOIN vencimento venc on venc.cod_venc = empv.cod_venc
+	GROUP BY 1
+)
+,desconto_bruto AS (
+	SELECT
+		emp.matr,
+		SUM(COALESCE(desco.valor, NULL, 0)) AS desconto
+	FROM empregado emp
+	JOIN departamento dp on dp.cod_dep = emp.lotacao
+	JOIN divisao dv on dv.cod_divisao = emp.lotacao_div
+	LEFT JOIN emp_desc empd on empd.matr = emp.matr
+	LEFT JOIN desconto desco on desco.cod_desc = empd.cod_desc
+	GROUP BY 1
+)
+SELECT
+	dp.nome AS "Departamento",
+	emp.nome AS "Empregado",
+	salariob.salario AS "Salario Bruto",
+	descontob.desconto AS "Total Desconto",
+	SUM(salariob.salario - descontob.desconto) AS "Salario Liquido"
+FROM empregado emp
+JOIN departamento dp ON dp.cod_dep = emp.lotacao
+LEFT JOIN salario_bruto salariob ON salariob.matr = emp.matr
+LEFT JOIN desconto_bruto descontob ON descontob.matr = emp.matr
+GROUP BY 1, 2, 3, 4
+ORDER BY 5 DESC
