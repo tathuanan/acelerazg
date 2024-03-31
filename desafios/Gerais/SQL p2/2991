@@ -1,0 +1,71 @@
+--Estatísticas dos Departamentos                     (problema - 2991)
+
+WITH salario_bruto AS (
+	SELECT
+		emp.matr,
+		emp.lotacao,
+		SUM(COALESCE(venc.valor, NULL, 0)) AS salario
+	FROM empregado emp
+	JOIN departamento dp on dp.cod_dep = emp.lotacao
+	JOIN divisao dv on dv.cod_divisao = emp.lotacao_div
+	LEFT JOIN emp_venc empv on empv.matr = emp.matr
+	LEFT JOIN vencimento venc on venc.cod_venc = empv.cod_venc
+	GROUP BY 1, 2
+)
+,desconto_bruto AS (
+	SELECT
+		emp.matr,
+		emp.lotacao,
+		SUM(COALESCE(desco.valor, NULL, 0)) AS desconto
+	FROM empregado emp
+	JOIN departamento dp on dp.cod_dep = emp.lotacao
+	JOIN divisao dv on dv.cod_divisao = emp.lotacao_div
+	LEFT JOIN emp_desc empd on empd.matr = emp.matr
+	LEFT JOIN desconto desco on desco.cod_desc = empd.cod_desc
+	GROUP BY 1, 2
+)
+,media_por_divisao AS (
+	SELECT
+		salariob.lotacao,
+		ROUND(AVG(salario - desconto), 2) AS media
+	FROM salario_bruto salariob
+	LEFT JOIN desconto_bruto descontob ON descontob.matr = salariob.matr
+	GROUP BY 1
+)
+,funcionario_por_departamento AS (
+	SELECT
+		emp.lotacao,
+		COUNT(lotacao) AS numero_empregados
+	FROM empregado emp
+	LEFT JOIN departamento dp ON dp.cod_dep = emp.lotacao
+	GROUP BY 1
+)
+,maior_salario_por_departamento AS (
+	SELECT
+        salariob.lotacao,
+    	MAX(salario - desconto) AS maior
+    FROM salario_bruto salariob
+	LEFT JOIN desconto_bruto ON desconto_bruto.matr = salariob.matr
+    GROUP BY 1
+)
+, menor_salario_por_departamento AS (
+    SELECT
+ 		salariob.lotacao,
+        MIN(salario - desconto) AS menor
+    FROM salario_bruto salariob
+    LEFT JOIN desconto_bruto descontob ON descontob.matr = salariob.matr
+    GROUP BY 1
+)
+SELECT
+    dp.nome AS "Nome Departamento",
+    fpd.numero_empregados AS "Numero de Empregados",
+    mediad.media AS "Media Salarial",
+    mspd.maior AS "Maior Salario",
+    menorspd.menor AS "Menor Salario"
+FROM funcionario_por_departamento fpd
+JOIN departamento dp on dp.cod_dep = fpd.lotacao
+JOIN media_por_divisao mediad ON fpd.lotacao = mediad.lotacao
+JOIN maior_salario_por_departamento mspd ON mspd.lotacao = fpd.lotacao
+JOIN menor_salario_por_departamento menorspd ON menorspd.lotacao = fpd.lotacao
+WHERE mediad.media IN (SELECT MAX(media) OVER (PARTITION BY lotacao) FROM media_por_divisao)
+ORDER BY 3 DESC;
